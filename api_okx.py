@@ -20,8 +20,11 @@ Lo que haremos con la api es:
 - Cerrar una posicion (enviar client_order_id)
 
 """
+import time
+
 import pandas as pd
 import pprint  # import print para poder imprimir los json de manera mas ordenada
+import datetime
 
 # Usaremos la libreria okx para interactuar con la api de okx
 from okx.Account import AccountAPI
@@ -30,6 +33,8 @@ from okx.Trade import TradeAPI
 
 from keys import API_KEY, API_SECRET, PASSPHRASE
 
+import uuid
+import base64
 
 # Funciones para obtener ciertos objetos necesarios para interactuar con la api de okx
 def get_account_api(api_key, api_secret, passphrase, flag='1'):
@@ -50,8 +55,9 @@ def get_instruments(account_api, instType='SWAP'):
     """
     https://www.okx.com/docs-v5/en/#trading-account-rest-api-get-instruments
 
-    Esto lo vamos a utilizar para calcular el size a enviar en las ordenes, ya que el el size en este caso no es una
-    cantidad de usdt, sino una cantidad de contratos.
+    Sobre el size
+    En el caso de OKX, el size de la orden no es una cantidad de usdt ni tampoco una cantidad de cripto, si no que es
+    una cantidad de contratos. Por ello, debermos calcular cuantos contratos vamos a comprar o vender.
 
     Lo que tendremos en cuenta es
     - ctVal: Contract value, es el valor de un contrato en usd. Por ejemplo, en BTC-USDT-SWAP es 0.001
@@ -91,21 +97,21 @@ def get_data_instruments(account_api, tickers, instType='SWAP'):
     for i in instruments:
         if i['instId'] in tickers:
             data[i['instId']] = {}
-            data[i['instId']]['ctVal'] = i['ctVal']
-            data[i['instId']]['minSz'] = i['minSz']
-            data[i['instId']]['tickSz'] = i['tickSz']
+            data[i['instId']]['ctVal'] = float(i['ctVal'])
+            data[i['instId']]['minSz'] = float(i['minSz'])
+            data[i['instId']]['tickSz'] = float(i['tickSz'])
 
     # podriamos tambien entregar el max leverage, etc...
 
     return data
 
 
-def set_leverage(account_trade_api, instId, lever):
+def set_leverage(account_api, instId, lever):
     """
     https://www.okx.com/docs-v5/en/#trading-account-rest-api-set-leverage
     """
-    long = account_trade_api.set_leverage(instId=instId, lever=lever, mgnMode='isolated', posSide='long')
-    short = account_trade_api.set_leverage(instId=instId, lever=lever, mgnMode='isolated', posSide='short')
+    long = account_api.set_leverage(instId=instId, lever=lever, mgnMode='isolated', posSide='long')
+    short = account_api.set_leverage(instId=instId, lever=lever, mgnMode='isolated', posSide='short')
 
     if long['code'] == '0' and short['code'] == '0':
         return True
@@ -132,6 +138,7 @@ def get_balance(account_api):
 def get_usdt_balance(account_api):
     balance = get_balance(account_api)
     usdt = balance.get('USDT', 0)
+    usdt = float(usdt)
 
     return usdt
 
@@ -208,10 +215,9 @@ def get_historical_data_formatted(client_md, instId, bar='1m', limit=300):
     return df
 
 
-# VOY POR ACA
 def send_market_order(account_trade_api, instId, tdMode, ccy, clOrdId, side, posSide, ordType, sz):
     """
-    https://www.okx.com/docs-v5/en/#trading-trade-api-place-order
+    https://www.okx.com/docs-v5/en/#order-book-trading-trade-post-place-order
     """
     order = account_trade_api.place_order(instId=instId,
                                           tdMode=tdMode,
@@ -223,6 +229,124 @@ def send_market_order(account_trade_api, instId, tdMode, ccy, clOrdId, side, pos
                                           sz=sz)
 
     return order
+
+
+def api_open_position(instId, posSide, sz, account_trade_api):
+
+    # crear clOrdId unico, solo 32 caracters y solo letras y numeros
+    clOrdId = generate_unique_clordid()
+
+    order = send_market_order(account_trade_api=account_trade_api,
+                              instId=instId,
+                              tdMode='isolated',
+                              ccy='USDT',
+                              clOrdId=clOrdId,
+                              side='buy' if posSide == 'long' else 'sell',
+                              posSide=posSide,
+                              ordType='market',
+                              sz=sz)
+
+    return clOrdId
+
+
+def get_data_open_position(account_trade_api, instId, clOrdId):
+    """
+
+    Retorna el execution_time, avx_price, fillSz, fee
+
+    :param account_trade_api:
+    :param instId:
+    :param clOrdId:
+    :return:
+    """
+    data = account_trade_api.get_order(instId=instId, clOrdId=clOrdId)
+    data = data.get('data', [])
+
+    if not data:
+        time.sleep(1)
+
+        data = account_trade_api.get_order(instId=instId, clOrdId=clOrdId)
+        data = data.get('data', [])
+
+    data = data[0]
+
+    r = {}
+
+    if data:
+        execution_time = data['fillTime']
+        # execution time from timestamp to datetime to string
+        execution_time = datetime.datetime.fromtimestamp(int(execution_time) / 1000).strftime('%Y-%m-%d %H:%M:%S')
+        r['execution_time'] = execution_time
+        r['avg_price'] = float(data['avgPx'])
+        r['contratos'] = float(data['fillSz'])
+        r['fee'] = float(data['fee'])
+
+    return r
+
+
+def api_close_position(instId, posSide, account_trade_api, clOrdId=None, mgnMode='isolated', ccy='USDT', autoCxl='true'):
+
+    if not clOrdId:
+        clOrdId = generate_unique_clordid()
+
+    order = account_trade_api.close_positions(instId=instId,
+                                              mgnMode=mgnMode,
+                                              posSide=posSide,
+                                              ccy=ccy,
+                                              autoCxl=autoCxl,
+                                              clOrdId=clOrdId)
+    # en este caso me conviene enviar el clOrdId para luego poder consultar la orden, ya que el cierre de posicion
+    # no me devuelve un order id
+
+    return clOrdId
+
+
+def get_data_close_position(account_trade_api, instId, clOrdId):
+    """
+
+    Retorna el execution_time, avx_price, fee, pnl
+
+    :param account_trade_api:
+    :param instId:
+    :param clOrdId:
+    :return:
+    """
+    data = account_trade_api.get_order(instId=instId, clOrdId=clOrdId)
+    data = data.get('data', [])
+    data = data[0]
+
+    r = {}
+
+    if data:
+        execution_time = data['fillTime']
+        # execution time from timestamp to datetime to string
+        execution_time = datetime.datetime.fromtimestamp(int(execution_time) / 1000).strftime('%Y-%m-%d %H:%M:%S')
+        r['execution_time'] = execution_time
+        r['avg_price'] = data['avgPx']
+        r['fee'] = data['fee']
+        r['contratos'] = data['sz']
+        r['pnl'] = data['pnl']
+
+    return r
+
+
+def generate_unique_clordid():
+    # Generar un UUID
+    uuid_value = uuid.uuid4()
+
+    # Convertir el UUID a bytes y luego a base64
+    uuid_bytes = uuid_value.bytes
+    base64_uuid = base64.b64encode(uuid_bytes).decode('ascii')
+
+    # Eliminar caracteres no alfanuméricos y limitar a 32 caracteres
+    clean_id = ''.join(c for c in base64_uuid if c.isalnum())[:32]
+
+    return clean_id
+
+
+
+
+
 
 
 if __name__ == '__main__':

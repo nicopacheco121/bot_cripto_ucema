@@ -215,5 +215,6 @@
     - side: buy o sell
     - avgPx: precio promedio del cierre
     - fee: fee
+    - pnl
 
 """
