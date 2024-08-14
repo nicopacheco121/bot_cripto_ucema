@@ -3,7 +3,7 @@ import ta.momentum
 
 
 def get_adx(df):
-    data = df.copy()
+    data = df.copy()  # hacemos una copia para no modificar el original y evitar warnings
 
     # Initialize the ADX indicator
     adx_indicator = ta.trend.ADXIndicator(high=data['high'],
@@ -72,15 +72,17 @@ if __name__ == '__main__':
     """
     import config
     from google_sheets import get_google_sheet, read_all_sheet
-    from api_okx import get_account_md_api
-    from functions import get_data_tickers
-
-    # Obtenemos los objetos necesarios
-    gogole_sheet = get_google_sheet(config.FILE_JSON, config.FILE_SHEET)
-    parametros = read_all_sheet(gogole_sheet, config.HOJA_PARAMETROS)
+    from api_okx import get_account_md_api, get_account_api
+    from functions import get_data_tickers, get_parametros
+    from keys import API_KEY, API_SECRET, PASSPHRASE
 
     # Obtenemos el client_md
     client_md = get_account_md_api()
+    account_api = get_account_api(API_KEY, API_SECRET, PASSPHRASE)
+
+    # Obtenemos los objetos necesarios
+    gogole_sheet = get_google_sheet(config.FILE_JSON, config.FILE_SHEET)
+    parametros = get_parametros(account_api, gogole_sheet)
 
     # Descargamos la data de los tickers
     data = get_data_tickers(parametros, client_md)
@@ -89,7 +91,7 @@ if __name__ == '__main__':
     # Agregamos los indicadores
     data_indicadores = {}
     for k, v in data.items():
-        data_indicadores[k] = add_indicadores(v)
+        data_indicadores[k] = add_indicadores(v, parametros[k])
 
     print(data_indicadores)
 
