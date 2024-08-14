@@ -1,5 +1,4 @@
 import requests
-import traceback
 
 
 def send_telegram_message(bot_token, message, chat_id_list):
@@ -25,8 +24,6 @@ def send_telegram_message(bot_token, message, chat_id_list):
             response = requests.get(send_text)  # Enviamos la solicitud GET a la API de Telegram
 
             response.raise_for_status()  # Verificamos si la solicitud fue exitosa
-
-            print(f"Mensaje enviado exitosamente al chat_id: {chat_id}")
 
         except requests.RequestException as e:
             print(f"Error al enviar mensaje de Telegram al chat_id {chat_id}: {e}")

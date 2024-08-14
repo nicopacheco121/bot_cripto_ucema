@@ -1,5 +1,5 @@
 """
-En este archivo juntaremos diversas funciones necesarias para el funcionamiento del robot.
+En este modulo juntaremos diversas funciones necesarias para el funcionamiento del robot.
 """
 
 from alertas import send_telegram_message
@@ -141,7 +141,7 @@ def close_positions(posiciones, posiciones_api, data, account_trade_api, list_al
     :return:
     """
 
-    print('Cerrando posiciones')
+    # print('Cerrando posiciones')
 
     posiciones_cerradas = []
     for p in posiciones:
@@ -238,7 +238,7 @@ def open_positions(parametros, posiciones, posiciones_cerradas, usdt, data, acco
             # Abro la posicion
             ticker = parametros[p]['ticker']
 
-            print(f"Abriendo posicion {ticker} por {motivo} side {side} con {quantity} contratos")
+            # print(f"Abriendo posicion {ticker} por {motivo} side {side} con {quantity} contratos")
 
             clOrdId, code = api_open_position(ticker, side, quantity, account_trade_api)
 
@@ -440,6 +440,7 @@ def send_telegram_messages(list_alertas, bot_token, chat_id_list):
     for alerta in list_alertas:
         send_telegram_message(bot_token, alerta, chat_id_list)
 
+    print(f"Mensaje enviado exitosamente a chat_id: {chat_id_list}")
 
 def work_sheets(list_sheets, sheet, sheet_operaciones='operaciones', sheet_posiciones='posiciones'):
     """
@@ -495,9 +496,9 @@ if __name__ == '__main__':
     account_api = get_account_api(API_KEY, API_SECRET, PASSPHRASE)
 
     # Obtenemos los objetos necesarios
-    gogole_sheet = get_google_sheet(config.FILE_JSON, config.FILE_SHEET)
+    google_sheets_obj = get_google_sheet(config.FILE_JSON, config.FILE_SHEET)
 
-    parametros = get_parametros(account_api, gogole_sheet, config.HOJA_PARAMETROS)
+    parametros = get_parametros(account_api, google_sheets_obj, config.HOJA_PARAMETROS)
 
     """ DATA DE PRECIOS """
 

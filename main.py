@@ -7,9 +7,9 @@ import config
 from keys import API_KEY, API_SECRET, PASSPHRASE, BOT_TOKEN, CHAT_ID_LIST
 import google_sheets
 import alertas
-import time
 import api_okx
 import functions
+
 from datetime import datetime
 import pprint
 import traceback
@@ -19,11 +19,9 @@ def run():
 
     while True:
 
-        print('Iniciando bot')
-
         try:
             now = datetime.now()
-            print(f'Iniciando bot {datetime.now()}')
+            print(f'\nIniciando bot {datetime.now()}')
 
             # Obtengo los clientes necesarios
             account_api = api_okx.get_account_api(API_KEY, API_SECRET, PASSPHRASE)
@@ -38,55 +36,60 @@ def run():
 
             # Base de datos de parametros
             parametros = functions.get_parametros(account_api, sheet, config.HOJA_PARAMETROS)
+            # print('\nParametros')
+            # pprint.pprint(parametros)
 
-            print('\nParametros')
-            pprint.pprint(parametros)
-
-            # # Base de datos de posiciones abiertas
-            # posiciones = google_sheets.read_all_sheet(sheet, config.HOJA_POSICIONES)
+            # Base de datos de posiciones abiertas
+            posiciones = google_sheets.read_all_sheet(sheet, config.HOJA_POSICIONES)
             # print('\nPosiciones')
             # pprint.pprint(posiciones)
 
-            posiciones = []
+            # Posiciones abiertas en okx
+            posiciones_api = api_okx.get_positions_dict(account_api)
+            # print('\nPosiciones API')
+            # pprint.pprint(posiciones_api)
 
             # Descargo la data de los tickers
             data = functions.get_data_tickers(parametros, client_md)
-            print('\nData tickers')
-            print(data)
+            # print('\nData tickers')
+            # print(data)
 
             # Close positions
             # si cierro una posicion no permito que se abra de nuevo en la misma corrida
-            posiciones_cerradas = functions.close_positions(posiciones, data, account_trade_api, to_telegram, to_sheets)
-            print(f'\nPosiciones cerradas: {posiciones_cerradas}')
+            posiciones_cerradas = functions.close_positions(posiciones, posiciones_api, data, account_trade_api, to_telegram, to_sheets)
+            # print(f'\nPosiciones cerradas: {posiciones_cerradas}')
 
-            # # Veo balance en USDT luego de cerrar posiciones
-            # balance = api_okx.get_usdt_balance(account_api)
+            # Veo balance en USDT luego de cerrar posiciones
+            balance = api_okx.get_usdt_balance(account_api)
             # print(f'\nBalance USDT {balance}')
 
-            balance = 5000
-
             # Seteo leverage
-            print('\nSeteo leverage')
+            # print('\nSeteo leverage')
             functions.fx_set_leverage(account_api, parametros)
 
             # Calculo indicadores
-            print('\nCalculo indicadores')
+            # print('\nCalculo indicadores')
             data = functions.calculate_indicators(data, parametros)
 
             # Abro posiciones
-            print('\nAbro posiciones')
+            # print('\nAbro posiciones')
             functions.open_positions(parametros, posiciones, posiciones_cerradas, balance, data, account_trade_api, to_telegram, to_sheets)
 
             # Envio telegram
-            print('\nEnvio telegram')
+            # print('\nEnvio telegram')
             functions.send_telegram_messages(to_telegram, BOT_TOKEN, CHAT_ID_LIST)
+
+            # Ahora pregunto nuevamente las posiciones abiertas para obtener el margen y nocional de cada posicion y
+            # agregarlo a la hoja de posiciones
+            posiciones = api_okx.get_positions_dict(account_api)
+            functions.add_margen_positions(list_sheet=to_sheets, positions_api=posiciones)
 
             # Guardo en google sheets
             print('\nGuardo en google sheets')
             functions.work_sheets(to_sheets, sheet)
 
             # print duration bot como la diferencia entre now y el inicio
-            print(f'Duration bot: {datetime.now() - now}')
+            # print(f'Duration bot: {datetime.now() - now}')
 
             # Duermo hasta el siguiente minuto calendario
             functions.sleep_until_next_minute()
