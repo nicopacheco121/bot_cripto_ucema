@@ -4,5 +4,3 @@ HOJA_PARAMETROS = 'parametros'
 HOJA_OPERACIONES = 'operaciones'
 HOJA_POSICIONES = 'posiciones'
 HOJA_TESTEO = 'testeo'
-
-SLEEP = 60  # segundos para correr el bot
