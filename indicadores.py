@@ -69,6 +69,9 @@ def add_indicadores(df, parametros):
 if __name__ == '__main__':
     """
     Obtenemos el precio, como vimos en functions
+    
+    https://github.com/bukosabino/ta
+    
     """
     import config
     from google_sheets import get_google_sheet, read_all_sheet
