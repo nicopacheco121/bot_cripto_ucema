@@ -352,6 +352,7 @@ def api_close_position(instId, posSide, account_trade_api, clOrdId=None, mgnMode
     :param ccy: Moneda (por defecto 'USDT')
     :param autoCxl: Cancelación automática (por defecto 'true')
     :return: ID de la orden de cierre
+
     """
 
     if not clOrdId:
