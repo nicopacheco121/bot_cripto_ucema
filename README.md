@@ -11,3 +11,5 @@ API_SECRET = ''
 PASSPHRASE = ''
 
 La data de cómo generar cada cosa está en el codigo
+
+Tambien es necesario setear el google sheets
