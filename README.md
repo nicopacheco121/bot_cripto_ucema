@@ -13,3 +13,5 @@ PASSPHRASE = ''
 La data de cómo generar cada cosa está en el codigo
 
 Tambien es necesario setear el google sheets
+
+La clave del zip es ucema2024
