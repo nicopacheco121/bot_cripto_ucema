@@ -14,14 +14,31 @@ from datetime import datetime
 import pprint
 import traceback
 
+import logging
+from pathlib import Path
+
 
 def run():
+
+    # Configuración de logging
+    log_dir = Path(__file__).parent / 'logs'
+    log_dir.mkdir(exist_ok=True)
+    log_file = log_dir / 'logger.log'
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler()
+        ]
+    )
 
     while True:
 
         try:
             now = datetime.now()
-            print(f'\nIniciando bot {datetime.now()}')
+            logging.info(f'Inicio de bot: {now}')
 
             # Obtengo los clientes necesarios
             account_api = api_okx.get_account_api(API_KEY, API_SECRET, PASSPHRASE)
@@ -58,6 +75,7 @@ def run():
             # si cierro una posicion no permito que se abra de nuevo en la misma corrida
             posiciones_cerradas = functions.close_positions(posiciones, posiciones_api, data, account_trade_api, to_telegram, to_sheets)
             # print(f'\nPosiciones cerradas: {posiciones_cerradas}')
+            logging.info(f'Posiciones cerradas: {posiciones_cerradas}')
 
             # Veo balance en USDT luego de cerrar posiciones
             balance = api_okx.get_usdt_balance(account_api)
@@ -70,6 +88,7 @@ def run():
             # Calculo indicadores
             # print('\nCalculo indicadores')
             data = functions.calculate_indicators(data, parametros)
+            logging.debug(f'Data con indicadores')
 
             # Abro posiciones
             # print('\nAbro posiciones')
@@ -85,8 +104,9 @@ def run():
             functions.add_margen_positions(list_sheet=to_sheets, positions_api=posiciones)
 
             # Guardo en google sheets
-            print('\nGuardo en google sheets')
+            # print('\nGuardo en google sheets')
             functions.work_sheets(to_sheets, sheet)
+            logging.info(f'Fin de bot: {datetime.now()}')
 
             # print duration bot como la diferencia entre now y el inicio
             # print(f'Duration bot: {datetime.now() - now}')

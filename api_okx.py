@@ -179,7 +179,7 @@ def get_balance(account_api):
     balance = {}
     for i in result['data'][0]['details']:
         coin = i['ccy']
-        monto = i['availBal']
+        monto = float(i['availBal'])
         balance[coin] = monto
 
     return balance
@@ -441,35 +441,35 @@ if __name__ == '__main__':
     account_trade_api = get_account_trade_api(API_KEY, API_SECRET, PASSPHRASE)
     client_md = get_account_md_api()
 
-    """ BALANCE """
-    balance = get_balance(account_api)
-    print(balance)
-
-    usdt = get_usdt_balance(account_api)
-    print(usdt)
-
-    """ POSICIONES ABIERTAS """
-    instType = 'SWAP'  # SWAP es para futuros perpetuos, tambien puede ser SPOT, etc
-    # previo abrir una posicion para ver algo
-    posiciones = get_positions(account_api=account_api, instType=instType)
-    print(posiciones)
-
-    # Ver detalle en ejemplo_order.py
-
-    dict_positions = get_positions_dict(account_api=account_api, instType=instType)
-    pprint.pprint(dict_positions)
-
-    """ DATA DE INSTRUMENTOS Y LEVERAGE """
-    # Instruments
-    tickers = ['BTC-USDT-SWAP', 'ETH-USDT-SWAP']
-    instruments = get_data_instruments(account_api, tickers)
-    print(instruments)
-
-    # Setear leverage
-    instId = 'BTC-USDT-SWAP'
-    lever = 5
-    print(set_leverage(account_api, instId, lever))
-
+    # """ BALANCE """
+    # balance = get_balance(account_api)
+    # print(balance)
+    #
+    # usdt = get_usdt_balance(account_api)
+    # print(usdt)
+    #
+    # """ POSICIONES ABIERTAS """
+    # instType = 'SWAP'  # SWAP es para futuros perpetuos, tambien puede ser SPOT, etc
+    # # previo abrir una posicion para ver algo
+    # posiciones = get_positions(account_api=account_api, instType=instType)
+    # print(posiciones)
+    #
+    # # Ver detalle en ejemplo_order.py
+    #
+    # dict_positions = get_positions_dict(account_api=account_api, instType=instType)
+    # pprint.pprint(dict_positions)
+    #
+    # """ DATA DE INSTRUMENTOS Y LEVERAGE """
+    # # Instruments
+    # tickers = ['BTC-USDT-SWAP', 'ETH-USDT-SWAP']
+    # instruments = get_data_instruments(account_api, tickers)
+    # print(instruments)
+    #
+    # # Setear leverage
+    # instId = 'BTC-USDT-SWAP'
+    # lever = 5
+    # print(set_leverage(account_api, instId, lever))
+    #
     """ PRECIOS """
     instId = "BTC-USDT-SWAP"
 
@@ -478,50 +478,50 @@ if __name__ == '__main__':
     data = data.get('data', [])
     df = pd.DataFrame(data)
     print(df)
-
-    # Ahora usando las funciones que formatean los datos
-    df = get_historical_data_formatted(client_md, instId, bar='1m', limit=300)
-
-    print(df)
-    print(df.columns)
+    #
+    # # Ahora usando las funciones que formatean los datos
+    # df = get_historical_data_formatted(client_md, instId, bar='1m', limit=300)
+    #
+    # print(df)
+    # print(df.columns)
 
     """ ORDENES """
-    # # Descomentar para probar las ordenes
-    # # Creo una orden
-    # order = account_trade_api.place_order(instId='BTC-USDT-SWAP',
-    #                                       tdMode='isolated',  # cross es para margen cruzado, isolated es para margen aislado
-    #                                       ccy='USDT',  # moneda de la orden
-    #                                       clOrdId='test',  # id de la orden
-    #                                       side='buy',  # buy o sell
-    #                                       posSide='long',  # long o short
-    #                                       ordType='market',
-    #                                       sz='1')
-    #
-    # print(order)
-    # # la diferencia entre cross e isolated es que en cross se usa el total del balance para la operacion, en isolated se usa un margen aislado
-    #
-    # order_id = order['data'][0]['ordId']
-    #
-    # # Consultar una orden
-    # order = account_trade_api.get_order(instId='BTC-USDT-SWAP', ordId=order_id)
-    # pprint.pprint(order)
-    # # Ver detalle en ejemplo_order.py
-    #
-    # # Cerrar una posicion
-    # order = account_trade_api.close_positions(instId='BTC-USDT-SWAP',
-    #                                           mgnMode='isolated',
-    #                                           posSide='long',
-    #                                           ccy='USDT',
-    #                                           autoCxl='true',
-    #                                           clOrdId='test123')
-    # # en este caso me conviene enviar el clOrdId para luego poder consultar la orden, ya que el cierre de posicion
-    # # no me devuelve un order id
-    # print(order)
-    #
-    # # Consulto posicion cerrada
-    # client_order_id = 'test123'
-    # order = account_trade_api.get_order(instId='BTC-USDT-SWAP', clOrdId=client_order_id)
-    # pprint.pprint(order)
-    #
-    # # Ver detalle en ejemplo_order.py
+    # Descomentar para probar las ordenes
+    # Creo una orden
+    order = account_trade_api.place_order(instId='BTC-USDT-SWAP',
+                                          tdMode='isolated',  # cross es para margen cruzado, isolated es para margen aislado
+                                          ccy='USDT',  # moneda de la orden
+                                          clOrdId='test',  # id de la orden
+                                          side='buy',  # buy o sell
+                                          posSide='long',  # long o short
+                                          ordType='market',
+                                          sz='1')
+
+    print(order)
+    # la diferencia entre cross e isolated es que en cross se usa el total del balance para la operacion, en isolated se usa un margen aislado
+
+    order_id = order['data'][0]['ordId']
+
+    # Consultar una orden
+    order = account_trade_api.get_order(instId='BTC-USDT-SWAP', ordId=order_id)
+    pprint.pprint(order)
+    # Ver detalle en ejemplo_order.py
+
+    # Cerrar una posicion
+    order = account_trade_api.close_positions(instId='BTC-USDT-SWAP',
+                                              mgnMode='isolated',
+                                              posSide='long',
+                                              ccy='USDT',
+                                              autoCxl='true',
+                                              clOrdId='test123')
+    # en este caso me conviene enviar el clOrdId para luego poder consultar la orden, ya que el cierre de posicion
+    # no me devuelve un order id
+    print(order)
+
+    # Consulto posicion cerrada
+    client_order_id = 'test123'
+    order = account_trade_api.get_order(instId='BTC-USDT-SWAP', clOrdId=client_order_id)
+    pprint.pprint(order)
+
+    # Ver detalle en ejemplo_order.py
 
